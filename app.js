@@ -12,7 +12,20 @@ class TodoTracker {
         this.initElements();
         this.initEventListeners();
         this.setDateInput();
+        this.restoreActiveState();
         this.render();
+    }
+
+    restoreActiveState() {
+        const todos = this.getCurrentDateTodos();
+        const runningTodo = todos.find(t => t.running);
+
+        if (runningTodo) {
+            this.runningTodoId = runningTodo.id;
+            this.runningTimer = setInterval(() => {
+                this.updateTimer(runningTodo.id);
+            }, 1000);
+        }
     }
 
     initElements() {
