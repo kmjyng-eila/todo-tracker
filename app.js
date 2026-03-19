@@ -4,6 +4,7 @@ class TodoTracker {
         this.todos = this.loadFromLocalStorage();
         this.runningTimer = null;
         this.runningTodoId = null;
+        this.holdTimer = null;
         this.pendingHoldTodoId = null;
         this.currentView = 'daily';
         this.focusScoreChart = null;
@@ -26,9 +27,27 @@ class TodoTracker {
             this.runningTimer = setInterval(() => {
                 this.updateTimer(runningTodo.id);
             }, 1000);
+        } else if (onHoldTodo) {
+            this.startHoldTimer();
         }
 
         this.updatePageTitle();
+    }
+
+    startHoldTimer() {
+        if (this.holdTimer) {
+            clearInterval(this.holdTimer);
+        }
+        this.holdTimer = setInterval(() => {
+            this.updateStats();
+        }, 1000);
+    }
+
+    stopHoldTimer() {
+        if (this.holdTimer) {
+            clearInterval(this.holdTimer);
+            this.holdTimer = null;
+        }
     }
 
     updatePageTitle() {
@@ -312,6 +331,7 @@ class TodoTracker {
         this.saveToLocalStorage();
         this.cancelHold();
         this.updatePageTitle();
+        this.startHoldTimer();
         this.render();
     }
 
@@ -343,12 +363,14 @@ class TodoTracker {
         }, 1000);
 
         this.saveToLocalStorage();
+        this.stopHoldTimer();
         this.updatePageTitle();
         this.render();
     }
 
     finishTodo(id) {
         this.stopCurrentTask();
+        this.stopHoldTimer();
 
         const todos = this.getCurrentDateTodos();
         const todo = todos.find(t => t.id === id);
