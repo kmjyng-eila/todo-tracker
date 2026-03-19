@@ -19,12 +19,29 @@ class TodoTracker {
     restoreActiveState() {
         const todos = this.getCurrentDateTodos();
         const runningTodo = todos.find(t => t.running);
+        const onHoldTodo = todos.find(t => t.onHold);
 
         if (runningTodo) {
             this.runningTodoId = runningTodo.id;
             this.runningTimer = setInterval(() => {
                 this.updateTimer(runningTodo.id);
             }, 1000);
+        }
+
+        this.updatePageTitle();
+    }
+
+    updatePageTitle() {
+        const todos = this.getCurrentDateTodos();
+        const runningTodo = todos.find(t => t.running);
+        const onHoldTodo = todos.find(t => t.onHold);
+
+        if (runningTodo) {
+            document.title = '🔥 집중 중 - Todo Tracker';
+        } else if (onHoldTodo) {
+            document.title = '⚠️ HOLD - Todo Tracker';
+        } else {
+            document.title = '🎯 Todo Tracker';
         }
     }
 
@@ -206,6 +223,7 @@ class TodoTracker {
         }, 1000);
 
         this.saveToLocalStorage();
+        this.updatePageTitle();
         this.render();
     }
 
@@ -268,6 +286,7 @@ class TodoTracker {
         this.stopTimer();
         this.saveToLocalStorage();
         this.cancelHold();
+        this.updatePageTitle();
         this.render();
     }
 
@@ -299,6 +318,7 @@ class TodoTracker {
         }, 1000);
 
         this.saveToLocalStorage();
+        this.updatePageTitle();
         this.render();
     }
 
@@ -319,6 +339,7 @@ class TodoTracker {
         todo.completed = true;
         todo.onHold = false;
         this.saveToLocalStorage();
+        this.updatePageTitle();
         this.render();
     }
 
