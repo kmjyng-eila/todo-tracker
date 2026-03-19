@@ -465,11 +465,13 @@ class TodoTracker {
             holdHistory.forEach(hold => {
                 let holdDuration = 0;
 
-                if (hold.resumedAt) {
+                if (hold.resumedAt && hold.heldAt) {
                     holdDuration = (hold.resumedAt - hold.heldAt) / 1000;
                     allRestartDelays.push(holdDuration);
-                } else if (hold.heldAt && todo.onHold && holdHistory.indexOf(hold) === holdHistory.length - 1) {
-                    holdDuration = (Date.now() - hold.heldAt) / 1000;
+                } else if (hold.heldAt && !hold.resumedAt) {
+                    if (todo.onHold && holdHistory.indexOf(hold) === holdHistory.length - 1) {
+                        holdDuration = (Date.now() - hold.heldAt) / 1000;
+                    }
                 }
 
                 totalHoldSeconds += holdDuration;
@@ -554,7 +556,7 @@ class TodoTracker {
                     : activeTodo.text;
 
                 const lastHold = activeTodo.holdHistory[activeTodo.holdHistory.length - 1];
-                const holdDuration = Date.now() - lastHold.holdStartTime;
+                const holdDuration = lastHold.heldAt ? Date.now() - lastHold.heldAt : 0;
                 const holdTimeText = this.formatTime(holdDuration);
 
                 this.statusValue.textContent = taskName;
@@ -583,10 +585,12 @@ class TodoTracker {
 
             const holdTime = (todo.holdHistory || []).reduce((sum, hold) => {
                 let duration = 0;
-                if (hold.resumedAt) {
+                if (hold.resumedAt && hold.heldAt) {
                     duration = hold.resumedAt - hold.heldAt;
-                } else if (hold.heldAt && todo.onHold && todo.holdHistory.indexOf(hold) === todo.holdHistory.length - 1) {
-                    duration = Date.now() - hold.heldAt;
+                } else if (hold.heldAt && !hold.resumedAt) {
+                    if (todo.onHold && todo.holdHistory.indexOf(hold) === todo.holdHistory.length - 1) {
+                        duration = Date.now() - hold.heldAt;
+                    }
                 }
                 return sum + duration;
             }, 0);
@@ -714,10 +718,12 @@ class TodoTracker {
 
         const totalHoldTime = (todo.holdHistory || []).reduce((sum, hold) => {
             let duration = 0;
-            if (hold.resumedAt) {
+            if (hold.resumedAt && hold.heldAt) {
                 duration = hold.resumedAt - hold.heldAt;
-            } else if (hold.heldAt && todo.onHold && todo.holdHistory.indexOf(hold) === todo.holdHistory.length - 1) {
-                duration = Date.now() - hold.heldAt;
+            } else if (hold.heldAt && !hold.resumedAt) {
+                if (todo.onHold && todo.holdHistory.indexOf(hold) === todo.holdHistory.length - 1) {
+                    duration = Date.now() - hold.heldAt;
+                }
             }
             return sum + duration;
         }, 0);
