@@ -41,7 +41,7 @@ class TodoTracker {
         } else if (onHoldTodo) {
             document.title = '⚠️ HOLD - Todo Tracker';
         } else {
-            document.title = '🎯 Todo Tracker';
+            document.title = 'Todo Tracker';
         }
     }
 
