@@ -446,14 +446,26 @@ class TodoTracker {
         ));
 
         let message = '';
-        if (totalScore >= 80) {
-            message = '🔥 집중 상태 매우 좋음';
-        } else if (totalScore >= 60) {
-            message = '👍 괜찮음, Hold만 조금 줄이면 더 좋아짐';
-        } else if (totalScore >= 40) {
-            message = '⚠️ 흐름이 자주 끊김';
+        const holdRatio = (totalFocusSeconds + totalHoldSeconds) > 0
+            ? totalHoldSeconds / (totalFocusSeconds + totalHoldSeconds)
+            : 0;
+
+        if (completionRate < 0.5) {
+            message = '🎯 태스크를 더 완료해보세요';
+        } else if (holdRatio > 0.3 || totalHoldCount > total * 2) {
+            message = '⚠️ Hold가 자주 발생하네요';
+        } else if (avgRestartMinutes > 15) {
+            message = '🔁 Hold 후 복귀가 느려요';
         } else {
-            message = '🚨 재시작 지연 또는 Hold 과다';
+            if (totalScore >= 80) {
+                message = '🔥 집중 상태 매우 좋음';
+            } else if (totalScore >= 60) {
+                message = '👍 좋은 흐름이에요!';
+            } else if (totalScore >= 40) {
+                message = '⚠️ 조금 더 집중해봐요';
+            } else {
+                message = '🚨 집중이 많이 흐트러졌어요';
+            }
         }
 
         return {
@@ -814,8 +826,14 @@ class TodoTracker {
         const weeklyData = this.getWeeklyData();
         const allTodos = weeklyData.allTodos;
 
-        const avgScore = weeklyData.dailyScores.length > 0
-            ? Math.round(weeklyData.dailyScores.reduce((sum, s) => sum + s, 0) / weeklyData.dailyScores.length)
+        const validScores = weeklyData.dailyScores.filter((score, index) => {
+            const date = weeklyData.dates[index];
+            const todos = this.todos[date] || [];
+            return todos.length > 0;
+        });
+
+        const avgScore = validScores.length > 0
+            ? Math.round(validScores.reduce((sum, s) => sum + s, 0) / validScores.length)
             : 0;
 
         const totalFocusMinutes = weeklyData.dailyFocusTimes.reduce((sum, t) => sum + t, 0);
