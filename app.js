@@ -300,9 +300,8 @@ class TodoTracker {
 
         todo.holdHistory.push({
             reason: reason,
-            timestamp: Date.now(),
-            duration: 0,
-            holdStartTime: Date.now()
+            heldAt: Date.now(),
+            resumedAt: null
         });
 
         todo.running = false;
@@ -331,7 +330,7 @@ class TodoTracker {
 
         if (todo.holdHistory.length > 0) {
             const lastHold = todo.holdHistory[todo.holdHistory.length - 1];
-            lastHold.duration = Date.now() - lastHold.holdStartTime;
+            lastHold.resumedAt = Date.now();
         }
 
         todo.onHold = false;
@@ -357,8 +356,8 @@ class TodoTracker {
 
         if (todo.onHold && todo.holdHistory.length > 0) {
             const lastHold = todo.holdHistory[todo.holdHistory.length - 1];
-            if (lastHold.duration === 0) {
-                lastHold.duration = Date.now() - lastHold.holdStartTime;
+            if (!lastHold.resumedAt) {
+                lastHold.resumedAt = Date.now();
             }
         }
 
@@ -464,12 +463,16 @@ class TodoTracker {
             totalHoldCount += holdHistory.length;
 
             holdHistory.forEach(hold => {
-                let holdDuration = hold.duration || 0;
-                if (todo.onHold && holdHistory.indexOf(hold) === holdHistory.length - 1) {
-                    holdDuration = Date.now() - hold.holdStartTime;
+                let holdDuration = 0;
+
+                if (hold.resumedAt) {
+                    holdDuration = (hold.resumedAt - hold.heldAt) / 1000;
+                    allRestartDelays.push(holdDuration);
+                } else if (hold.heldAt && todo.onHold && holdHistory.indexOf(hold) === holdHistory.length - 1) {
+                    holdDuration = (Date.now() - hold.heldAt) / 1000;
                 }
-                totalHoldSeconds += holdDuration / 1000;
-                allRestartDelays.push(holdDuration / 1000);
+
+                totalHoldSeconds += holdDuration;
             });
         });
 
@@ -579,9 +582,11 @@ class TodoTracker {
             totalFocusTime += focusTime;
 
             const holdTime = (todo.holdHistory || []).reduce((sum, hold) => {
-                let duration = hold.duration || 0;
-                if (todo.onHold && todo.holdHistory.indexOf(hold) === todo.holdHistory.length - 1) {
-                    duration = Date.now() - hold.holdStartTime;
+                let duration = 0;
+                if (hold.resumedAt) {
+                    duration = hold.resumedAt - hold.heldAt;
+                } else if (hold.heldAt && todo.onHold && todo.holdHistory.indexOf(hold) === todo.holdHistory.length - 1) {
+                    duration = Date.now() - hold.heldAt;
                 }
                 return sum + duration;
             }, 0);
@@ -708,9 +713,11 @@ class TodoTracker {
         }
 
         const totalHoldTime = (todo.holdHistory || []).reduce((sum, hold) => {
-            let duration = hold.duration || 0;
-            if (todo.onHold && todo.holdHistory.indexOf(hold) === todo.holdHistory.length - 1) {
-                duration = Date.now() - hold.holdStartTime;
+            let duration = 0;
+            if (hold.resumedAt) {
+                duration = hold.resumedAt - hold.heldAt;
+            } else if (hold.heldAt && todo.onHold && todo.holdHistory.indexOf(hold) === todo.holdHistory.length - 1) {
+                duration = Date.now() - hold.heldAt;
             }
             return sum + duration;
         }, 0);
@@ -778,8 +785,12 @@ class TodoTracker {
 
             const duration = document.createElement('div');
             duration.className = 'hold-duration';
-            const date = new Date(hold.timestamp);
-            duration.textContent = `${date.toLocaleTimeString()} - Hold duration: ${this.formatTime(hold.duration)}`;
+            const date = new Date(hold.heldAt);
+            let holdDuration = 0;
+            if (hold.resumedAt) {
+                holdDuration = hold.resumedAt - hold.heldAt;
+            }
+            duration.textContent = `${date.toLocaleTimeString()} - Hold duration: ${this.formatTime(holdDuration)}`;
 
             item.appendChild(reason);
             item.appendChild(duration);
@@ -849,7 +860,10 @@ class TodoTracker {
                 focusTime += todo.elapsedTime / 1000 / 60;
 
                 const todoHoldTime = (todo.holdHistory || []).reduce((sum, hold) => {
-                    return sum + (hold.duration || 0);
+                    if (hold.resumedAt && hold.heldAt) {
+                        return sum + (hold.resumedAt - hold.heldAt);
+                    }
+                    return sum;
                 }, 0);
                 holdTime += todoHoldTime / 1000 / 60;
             });
@@ -907,7 +921,9 @@ class TodoTracker {
         allTodos.forEach(todo => {
             (todo.holdHistory || []).forEach(hold => {
                 reasonCounts[hold.reason] = (reasonCounts[hold.reason] || 0) + 1;
-                restartDelays.push((hold.duration || 0) / 1000);
+                if (hold.resumedAt && hold.heldAt) {
+                    restartDelays.push((hold.resumedAt - hold.heldAt) / 1000);
+                }
             });
         });
 
