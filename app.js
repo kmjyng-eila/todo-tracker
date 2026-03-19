@@ -38,7 +38,32 @@ class TodoTracker {
         if (this.holdTimer) {
             clearInterval(this.holdTimer);
         }
+
+        const todos = this.getCurrentDateTodos();
+        const onHoldTodo = todos.find(t => t.onHold);
+
+        if (onHoldTodo && onHoldTodo.holdHistory.length > 0) {
+            const currentHold = onHoldTodo.holdHistory[onHoldTodo.holdHistory.length - 1];
+            console.log('holdTimer 시작:', {
+                taskId: onHoldTodo.id,
+                taskText: onHoldTodo.text,
+                currentHold: currentHold,
+                heldAt: currentHold.heldAt,
+                elapsed: currentHold.heldAt ? (Date.now() - currentHold.heldAt) / 1000 : 0
+            });
+        }
+
         this.holdTimer = setInterval(() => {
+            const todos = this.getCurrentDateTodos();
+            const onHoldTodo = todos.find(t => t.onHold);
+            if (onHoldTodo && onHoldTodo.holdHistory.length > 0) {
+                const currentHold = onHoldTodo.holdHistory[onHoldTodo.holdHistory.length - 1];
+                console.log('holdTimer tick:', {
+                    now: Date.now(),
+                    heldAt: currentHold.heldAt,
+                    elapsed: currentHold.heldAt ? (Date.now() - currentHold.heldAt) / 1000 : 0
+                });
+            }
             this.updateStats();
         }, 1000);
     }
@@ -317,10 +342,20 @@ class TodoTracker {
         const elapsed = Date.now() - todo.startTime;
         todo.elapsedTime += elapsed;
 
+        const heldAtTime = Date.now();
         todo.holdHistory.push({
             reason: reason,
-            heldAt: Date.now(),
+            heldAt: heldAtTime,
             resumedAt: null
+        });
+
+        console.log('Hold 클릭:', {
+            taskId: todo.id,
+            taskText: todo.text,
+            heldAt: heldAtTime,
+            heldAtReadable: new Date(heldAtTime).toLocaleTimeString(),
+            holdHistoryLength: todo.holdHistory.length,
+            lastHold: todo.holdHistory[todo.holdHistory.length - 1]
         });
 
         todo.running = false;
@@ -580,6 +615,17 @@ class TodoTracker {
                 const lastHold = activeTodo.holdHistory[activeTodo.holdHistory.length - 1];
                 const holdDuration = lastHold.heldAt ? Date.now() - lastHold.heldAt : 0;
                 const holdTimeText = this.formatTime(holdDuration);
+
+                console.log('Dashboard 업데이트:', {
+                    taskText: activeTodo.text,
+                    lastHold: lastHold,
+                    now: Date.now(),
+                    heldAt: lastHold.heldAt,
+                    holdDuration: holdDuration,
+                    holdDurationSeconds: holdDuration / 1000,
+                    holdTimeText: holdTimeText,
+                    finalText: `HOLD (${lastHold.reason}, ${holdTimeText})`
+                });
 
                 this.statusValue.textContent = taskName;
                 this.statusSubtext.textContent = `HOLD (${lastHold.reason}, ${holdTimeText})`;
