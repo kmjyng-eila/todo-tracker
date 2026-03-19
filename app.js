@@ -37,11 +37,37 @@ class TodoTracker {
         const onHoldTodo = todos.find(t => t.onHold);
 
         if (runningTodo) {
-            document.title = '🔥 집중 중 - Todo Tracker';
+            this.updateFaviconAndTitle('focus');
         } else if (onHoldTodo) {
-            document.title = '⚠️ HOLD - Todo Tracker';
+            this.updateFaviconAndTitle('hold');
         } else {
-            document.title = 'Todo Tracker';
+            this.updateFaviconAndTitle('default');
+        }
+    }
+
+    updateFaviconAndTitle(state) {
+        let link = document.querySelector("link[rel*='icon']");
+
+        if (!link) {
+            link = document.createElement('link');
+            link.rel = 'icon';
+            document.head.appendChild(link);
+        }
+
+        link.type = 'image/svg+xml';
+
+        switch(state) {
+            case 'focus':
+                link.href = 'favicon-focus.svg';
+                document.title = '집중 중 - Todo Tracker';
+                break;
+            case 'hold':
+                link.href = 'favicon-hold.svg';
+                document.title = 'HOLD - Todo Tracker';
+                break;
+            default:
+                link.href = 'favicon-default.svg';
+                document.title = 'Todo Tracker';
         }
     }
 
