@@ -39,31 +39,7 @@ class TodoTracker {
             clearInterval(this.holdTimer);
         }
 
-        const todos = this.getCurrentDateTodos();
-        const onHoldTodo = todos.find(t => t.onHold);
-
-        if (onHoldTodo && onHoldTodo.holdHistory.length > 0) {
-            const currentHold = onHoldTodo.holdHistory[onHoldTodo.holdHistory.length - 1];
-            console.log('holdTimer 시작:', {
-                taskId: onHoldTodo.id,
-                taskText: onHoldTodo.text,
-                currentHold: currentHold,
-                heldAt: currentHold.heldAt,
-                elapsed: currentHold.heldAt ? (Date.now() - currentHold.heldAt) / 1000 : 0
-            });
-        }
-
         this.holdTimer = setInterval(() => {
-            const todos = this.getCurrentDateTodos();
-            const onHoldTodo = todos.find(t => t.onHold);
-            if (onHoldTodo && onHoldTodo.holdHistory.length > 0) {
-                const currentHold = onHoldTodo.holdHistory[onHoldTodo.holdHistory.length - 1];
-                console.log('holdTimer tick:', {
-                    now: Date.now(),
-                    heldAt: currentHold.heldAt,
-                    elapsed: currentHold.heldAt ? (Date.now() - currentHold.heldAt) / 1000 : 0
-                });
-            }
             this.updateStats();
         }, 1000);
     }
@@ -231,7 +207,42 @@ class TodoTracker {
     }
 
     saveToLocalStorage() {
+        this.cleanupOldData();
         localStorage.setItem('todoTrackerData', JSON.stringify(this.todos));
+        this.logStorageSize();
+    }
+
+    cleanupOldData() {
+        const today = new Date();
+        const cutoffDate = new Date(today);
+        cutoffDate.setDate(cutoffDate.getDate() - 30);
+
+        const dates = Object.keys(this.todos);
+        let deletedCount = 0;
+
+        dates.forEach(dateStr => {
+            const date = new Date(dateStr);
+            if (date < cutoffDate) {
+                delete this.todos[dateStr];
+                deletedCount++;
+            }
+        });
+
+        if (deletedCount > 0) {
+            console.log(`🗑️ Cleaned up ${deletedCount} old date(s) (>30 days)`);
+        }
+    }
+
+    logStorageSize() {
+        try {
+            const data = localStorage.getItem('todoTrackerData');
+            if (data) {
+                const sizeKB = (data.length / 1024).toFixed(2);
+                console.log(`💾 localStorage size: ${sizeKB} KB`);
+            }
+        } catch (e) {
+            console.error('Failed to measure storage:', e);
+        }
     }
 
     getCurrentDateTodos() {
@@ -347,15 +358,6 @@ class TodoTracker {
             reason: reason,
             heldAt: heldAtTime,
             resumedAt: null
-        });
-
-        console.log('Hold 클릭:', {
-            taskId: todo.id,
-            taskText: todo.text,
-            heldAt: heldAtTime,
-            heldAtReadable: new Date(heldAtTime).toLocaleTimeString(),
-            holdHistoryLength: todo.holdHistory.length,
-            lastHold: todo.holdHistory[todo.holdHistory.length - 1]
         });
 
         todo.running = false;
